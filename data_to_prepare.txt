@@ -1,0 +1,23 @@
+IDEAS to solve the project
+
+1. Read the file with ip range
+2. For each address in ip range ping (troubles with optimalization :( - any ideas? Or just one ip address - and rest from that)
+3. If ip valid - we have response:
+	3.1. Log into by ssh
+	3.2 Gather appropriate information - all we can
+	3.3 Save the data to database? Or txt file? Or somtehing else?
+4. When ip range ends we need to appropriately cluster the data - topology etc.
+5. Print everything - topology (by graphs?) , data collected in tables etc. etc.
+
+
+Any ideas? ;)
+
+Tasks to preapre:
+
+TOPOLOGY - for start 
+
+1. Part for logging and collecting the data - saving to dataabse.
+2. Part for calculating.
+3. Part for displaying everything - this could be split to some smaller tasks ;)
+
+
