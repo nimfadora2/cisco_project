@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+{% if empty==True %}
+<h1> Start inspection </h1>
+<p> The inspection has not been done yet and database is empty. Press 'Start' to start inspection. Valid IP range is read from file 'ip_range.txt' <p>
+{% endif %}
+{% endblock %}
