@@ -1,8 +1,14 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 
 {% block page_content %}
 {% if empty==True %}
-<h1> Start inspection </h1>
-<p> The inspection has not been done yet and database is empty. Press 'Start' to start inspection. Valid IP range is read from file 'ip_range.txt' <p>
+<div class="page-header"><h1>Start network inspection</h1></div>
+
+<p> The inspection has not been done yet and the database is empty. Press <b>'Start'</b> to start inspection. <br> <br>
+    IP range is read from file <b>'ip_range.txt'</b> located in: <em>{{ path }}</em>. <br>
+    Passwords are read from file <b>'passwords.txt'</b> located in: <em>{{ path_pass }}</em>. <br>
+ <h3> Please make sure that these files are valid!</h3><p>
+<p> {{ wtf.quick_form(form) }}</p>
 {% endif %}
 {% endblock %}
