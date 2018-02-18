@@ -1,14 +1,118 @@
 {% extends "base.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
 
+{% block scripts %}
+{{ super() }}
+<script>
+    $(document).ready( function () {
+            var links=document.querySelectorAll('[id$="inter"]');
+        console.log(links);
+        for (var i=0;i<links.length;i++) {
+            $(links[i]).hide();
+        }
+            var links=document.querySelectorAll('[id$="modules"]');
+            console.log(links);
+            for (var i=0;i<links.length;i++){
+                $(links[i]).hide();
+        }
+    })
+</script>
+<script>
+$(document).ready(function(){
+    $("#submit").click(function(){
+        if ( ($("#name").val()) ) {
+            alert("The paragraph was clicked.");
+        }
+    });
+});
+</script>
+{% endblock %}
+
 {% block page_content %}
 {% if empty==True %}
 <div class="page-header"><h1>Start network inspection</h1></div>
 
 <p> The inspection has not been done yet and the database is empty. Press <b>'Start'</b> to start inspection. <br> <br>
-    IP range is read from file <b>'ip_range.txt'</b> located in: <em>{{ path }}</em>. <br>
-    Passwords are read from file <b>'passwords.txt'</b> located in: <em>{{ path_pass }}</em>. <br>
+    IP range is read by default from file <b>'ip_range.txt'</b> located in: <em>{{ path }}</em>. <br>
+    Passwords are read by default from file <b>'passwords.txt'</b> located in: <em>{{ path_pass }}</em>. <br>
  <h3> Please make sure that these files are valid!</h3><p>
+<br>
 <p> {{ wtf.quick_form(form) }}</p>
+{% else %}
+<h1> <b>Scan data</b> </h1>
+<br>
+<p> The result of last inspection is displayed below. To start the process once again press <b>'Start'</b> to start inspection. <br> <br>
+    IP range is read by default from file <b>'ip_range.txt'</b> located in: <em>{{ path }}</em> in the webserver. <br>
+    Passwords are read by default from file <b>'passwords.txt'</b> located in: <em>{{ path_pass }}</em> in the webserver. <br>
+ <h3> Please make sure that these files are valid!</h3><p>
+<br>
+<p> {{ wtf.quick_form(form) }}</p>
+<br>
+<h3> General info </h3>
+<div class="container">
+    <table class="table table-striped">
+        <tbody>
+        {% for data in scan_params %}
+            <tr>
+                <td> <b>{{ data[0] }}</b></td>
+                <td> {{ data[1] }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading"> <h4><b>R1</b></h4> </div>
+    <div class="panel-body">
+        <h3> <b>General info</b> </h3>
+        <hr>
+        <table class="table table-striped">
+                <tbody>
+                    {% for data in scan_params %}
+                        <tr>
+                            <td> <b>{{ data[0] }}</b></td>
+                            <td> {{ data[1] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        <table class="table">
+            <thead>
+            <th> <h3><b>Modules</b> </h3> </th>
+            <th> <button type="button" class="btn btn-success pull-right" onclick="$({{ id }}modules).toggle()"><span class="glyphicon glyphicon-sort"></span></button> </p> </th>
+            </thead>
+        </table>
+            <table class="table table-striped table-bordered" id="{{ id }}modules">
+            <tbody>
+             {% for data in scan_params %}
+            <tr>
+                <td> <b>{{ data[0] }}</b></td>
+                <td> {{ data[1] }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            </table>
+                <table class="table">
+            <thead>
+            <th> <h3><b>Interfaces</b> </h3> </th>
+            <th> <button type="button" class="btn btn-info pull-right" onclick="$({{ id }}inter).toggle()"><span class="glyphicon glyphicon-sort"></span></button> </p> </th>
+            </thead>
+        </table>
+            <table class="table table-striped table-bordered" id="{{ id }}inter">
+                <tbody>
+                    {% for data in scan_params %}
+                        <tr>
+                            <td> <b>{{ data[0] }}</b></td>
+                            <td> {{ data[1] }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+    </div>
+
+
+</div>
+
 {% endif %}
 {% endblock %}

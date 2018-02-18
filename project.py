@@ -12,8 +12,9 @@ from flask_sqlalchemy import SQLAlchemy
 import os
 from forms import Start
 import ipaddress
-import threading
+import datetime
 import time
+import subprocess
 
 ########################################
 ### Initialization of needed modules ###
@@ -41,6 +42,28 @@ def shutdown_server():
 	if func is None:
 		raise RuntimeError('Not running with the Werkzeug Server')
 	func()
+
+### Function that reads info from scan_params.txt ###
+def scan_params():
+	try:
+		# Try to open file for reading
+		scan_file = open("scan_params.txt", "r")
+
+		# Starting with the beginning of the file
+		scan_file.seek(0)
+
+		# Reading the line
+		scan = scan_file.read().splitlines()
+
+		# CLosing the file
+		scan_file.close()
+	except IOError:
+		return []
+	scan_info=[]
+	for data in scan:
+		print(data)
+		scan_info.append(data.split(":"))
+	return scan_info
 
 ### Function that reads valid ip range from file ###
 def ip_range():
@@ -110,9 +133,16 @@ def passwords():
 	flash("The file passwords.txt has been read.")
 	return password
 
-### Function responsible for checking if there is ability to ping the host, connecting to them and collecting information ###
-def pingy(ip_list,passwords):
-	return True
+### Function which is checking which addresses are available to ping ###
+def pingy(ip_list):
+	ip_available = []
+	for ip in ip_list:
+		ping_reply = subprocess.call(['ping', '-c', '2', '-w', '2', '-q', '-n', str(ip)])
+		### Appending ip to list if device is pingable ###
+		if ping_reply == 0:
+			ip_available.append(ip)
+	#print(ip_available)
+	return ip_available
 
 ############################
 ### Routes in web server ###
@@ -126,22 +156,31 @@ def pingy(ip_list,passwords):
 ### main route - displaying necessary information ###
 @app.route("/", methods=["GET","POST"])
 def main():
-	# For later - here need to be checked if database is filled
-	empty = True
+	# For later - here need to be checked if database is
+	scan = scan_params()
+	print(scan)
+	if len(scan)!=0:
+		empty = False
+	else:
+		empty=True
 	path = os.path.dirname(os.path.realpath(__file__))+"\ip_range.txt\n"
 	path_pass = os.path.dirname(os.path.realpath(__file__)) + "\passwords.txt\n"
 	form=Start()
 	if form.validate_on_submit():
 		ip_list=ip_range()
 		password_list=passwords()
-		data = pingy(ip_list,passwords)
-	return render_template("index.html",empty=empty, form=form, path=path, path_pass=path_pass)
+		ip_available = pingy(ip_list)
+		if len(ip_available)==0:
+			flash("No ability to ping any device with given IP adress. Check IP addresses in file and try again. ")
+		else:
+			flash("Ability to connect with devices in the network. Trying to establish ssh session in order to gather information. ")
+	return render_template("index.html",empty=empty, form=form, path=path, path_pass=path_pass,scan_params=scan,id="R1")
 
 ### shutdown route - closing web server ###
 @app.route("/shutdown")
 def shutdown():
 	shutdown_server()
-	return "Shutting server down..."
+	return render_template("shutting.html")
 
 
 ### run application ###
