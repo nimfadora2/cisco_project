@@ -10,6 +10,10 @@ neighbour = [['R1',['192.168.2.101','172.16.0.1'],['172.16.0.0/30','192.168.2.0/
              ]
 
 neighborship_dict={}
+
+
+
+
 for router in neighbour:
     for ip in router[1]:
         times=0
@@ -34,12 +38,6 @@ for router in neighbour:
 
 
 G=nx.Graph()
-
-
-#neighborship_dict={}
-
-#neighborship_dict[('R1','R2')]='172.16.0.3'
-#neighborship_dict[('R2','R1')]='172.16.0.2'
 
 
 G.add_edges_from(neighborship_dict.keys())

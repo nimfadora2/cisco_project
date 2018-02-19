@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+
+{% if no_file == True %}
+<div class="page-header"> <h1> <b>File not found</b> </h1> </div>
+<h3> File with topology image does not exist or has been corrupted. Scan the network to get the image of topology. </h3>
+{% else %}
+<div class="page-header"><h1> <b>Network topology</b> </h1></div>
+<h3> Below there is presented topology image of scanned network. Nodes with names indicates routers, nodes with networks indicates switches or hubs. </h3>
+<h4>To see description of each router got to 'Home'.</h4>
+<p> To save the picture on your computer click on the picture using right mouse button and choose: 'Save file' or 'Save file as...' <br>
+</p>
+<p style="text-align: center"><img src="../static/topology.png" alt="Network topology" align="middle"></p>
+
+{% endif %}
+
+{% endblock %}

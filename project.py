@@ -15,6 +15,7 @@ import ipaddress
 import datetime
 import time
 import subprocess
+import os.path
 
 ########################################
 ### Initialization of needed modules ###
@@ -61,7 +62,6 @@ def scan_params():
 		return []
 	scan_info=[]
 	for data in scan:
-		print(data)
 		scan_info.append(data.split(":"))
 	return scan_info
 
@@ -83,11 +83,11 @@ def ip_range():
 		flash("The file 'ip_range.txt' does not exist! Please check and try again!")
 		return None
 	### Reading into list IP's delimited by "," ###
-	ip_list_prev=ip_list_prev.split(",")
-
+	ip_list_prev=ip_list_prev.strip().strip(",").split(",")
 	ip_list=[]
 	### Striping each IP of excess white spaces ###
 	for i in range(len(ip_list_prev)):
+		if ip_list_prev[i]==[]: continue
 		ip_list_prev[i]=ip_list_prev[i].strip()
 
 		### Checking if adddressess are valid - if so apppending them to ip_list, else - returning []
@@ -101,7 +101,7 @@ def ip_range():
 			except ValueError:
 				flash("Invalid IP address! Check and try again.")
 				ip_list = []
-				return None
+				return ip_list
 			for i in range(1,number):
 				ip_list.append(ip+i)
 		else:
@@ -109,7 +109,7 @@ def ip_range():
 				ip_list.append(ipaddress.ip_address(ip_list_prev[i]))
 			except ValueError:
 				flash("Invalid IP address! Check and try again.")
-				return None
+				return ip_list
 	flash("The file ip_range.txt has been read.")
 	return ip_list
 
@@ -156,9 +156,8 @@ def pingy(ip_list):
 ### main route - displaying necessary information ###
 @app.route("/", methods=["GET","POST"])
 def main():
-	# For later - here need to be checked if database is
+
 	scan = scan_params()
-	print(scan)
 	if len(scan)!=0:
 		empty = False
 	else:
@@ -166,8 +165,12 @@ def main():
 	path = os.path.dirname(os.path.realpath(__file__))+"\ip_range.txt\n"
 	path_pass = os.path.dirname(os.path.realpath(__file__)) + "\passwords.txt\n"
 	form=Start()
+
 	if form.validate_on_submit():
 		ip_list=ip_range()
+		if len(ip_list)==0:
+			return render_template("index.html", empty=empty, form=form, path=path, path_pass=path_pass,
+								   scan_params=scan, id="R1")
 		password_list=passwords()
 		ip_available = pingy(ip_list)
 		if len(ip_available)==0:
@@ -182,6 +185,13 @@ def shutdown():
 	shutdown_server()
 	return render_template("shutting.html")
 
+### topology route - displays topology picture ###
+@app.route("/topology")
+def topology():
+	no_file=True
+	if os.path.exists("topology.png")==True:
+		no_file=False
+	return render_template("topology.html",no_file=no_file)
 
 ### run application ###
 # This application is placed in loopback 127.0.0.1 at the port 5000.
@@ -196,4 +206,6 @@ if __name__=='__main__':
 flask.pocoo.org/snippets/67/
 https://docs.python.org/3/library/ipaddress.html
 Book: M. Ginberg Flask Web Development
+https://stackoverflow.com/questions/6256043/css-position-loading-indicator-in-the-center-of-the-screen 
+https://stackoverflow.com/questions/17859993/basic-css-how-to-overlay-a-div-with-semi-transparent-div-on-top
 '''
