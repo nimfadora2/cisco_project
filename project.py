@@ -1,14 +1,10 @@
 ### Network management tool ###
 ### Group 8, Cisco Engineer Incubator 5.0 ###
-
-### To do: ###
-# 1. Check if the addresses in file are appropriate
-# 2. Change the main when all data is gathered
+### Authors: Anna Luszczkiewicz, Kinga Slowik, Volodymyr Ushnevych ###
 
 ### importing necessary modules for creating website ####
 from flask import Flask, request, render_template, redirect, url_for, flash
 from flask_bootstrap import Bootstrap
-from flask_sqlalchemy import SQLAlchemy
 import os
 from forms import Start
 import ipaddress
@@ -31,7 +27,6 @@ import networkx as nx
 app = Flask(__name__)
 app.config.from_object('config')
 bootstrap = Bootstrap(app)
-db = SQLAlchemy(app)
 
 #############################################
 ### Function definitions used in webpages ###
@@ -387,6 +382,11 @@ def topology():
 	if os.path.exists("topology.png")==True:
 		no_file=False
 	return render_template("topology.html",no_file=no_file)
+
+### help route - information about program and short description ###
+@app.route("/help")
+def help():
+	return render_template("help.html")
 
 ### run application ###
 # This application is placed in loopback 127.0.0.1 at the port 5000.
