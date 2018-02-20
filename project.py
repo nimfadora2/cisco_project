@@ -16,6 +16,9 @@ import datetime
 import time
 import subprocess
 import os.path
+import re
+import matplotlib as plt
+import networkx as nx
 
 ########################################
 ### Initialization of needed modules ###
@@ -61,9 +64,12 @@ def scan_params():
 	except IOError:
 		return []
 	scan_info=[]
+	done_well=False
 	for data in scan:
-		scan_info.append(data.split(":"))
-	return scan_info
+		scan_info.append(data.split(":",1))
+		if data.split(":")[0]=="Date of last successfull scan":
+			done_well=True
+	return scan_info,done_well
 
 ### Function that reads valid ip range from file ###
 def ip_range():
@@ -144,6 +150,182 @@ def pingy(ip_list):
 	#print(ip_available)
 	return ip_available
 
+### Function for reading file output to prepare it to the website format ###
+def formatting():
+	### Reading file output ###
+	output = open("final.txt", "r")
+	out = output.read().splitlines()
+	output.close()
+
+	all = []
+	number = 0
+	current = []
+	k=0
+	### State machine for appropriate reading of file ###
+	for line in out:
+		k=k+1
+		### Empty line - separator for routers ###
+		if line == '':
+			if current != []:
+				current.append(modules)
+				all.append(current)
+			current = []
+			number = 0
+		### Start of reading - line with field names ###
+		### Used for general info ###
+		elif line.startswith("Name"):
+			number = 0
+			prev = line.split('    ')
+		elif number == 0:
+			temp = line.split('    ')
+			general = []
+			for i in range(len(prev)):
+				general.append([prev[i], temp[i]])
+			number = 1
+			current.append(temp[0])
+		elif number == 1:
+			temp = line.split(":")
+			general.append([temp[0], temp[1].strip()])
+			current.append(general)
+			number = 2
+			interfaces = []
+		### Lines with names and status of interfaces ###
+		elif number == 2:
+			names = re.split(r'\s+', line.strip())
+			if line == "Inventory of device:":
+				current.append(interfaces)
+				modules = []
+				modules.append(['Name', 'Description'])
+				number = 3
+			elif len(names) == 5 and names[1] == 'IP':
+				names[1:3] = [' '.join(names[1:3])]
+				interfaces.append(names[0:4])
+			elif len(names) == 4:
+				interfaces.append(names)
+			else:
+				names[2:4] = [' '.join(names[2:4])]
+				interfaces.append(names[0:4])
+		### Part responsible for adding modules ###
+		elif number == 3:
+			temp = line.split("\", ")
+			modules.append([temp[0].strip('NAME: ').strip("\""), temp[1].strip('DESCR: ').strip("\"")])
+			if k==len(out):
+				current.append(modules)
+				all.append(current)
+	return all
+
+### Function for keeping scan parametres ###
+def scan_parametres(ok,scan,person):
+
+	### Writing to file if it is empty or not existing ###
+	if scan==[]:
+		out = open("scan_params.txt","w")
+		### Writing data if everything went successful ###
+		if ok==False:
+			out.write("Date of last unsuccessfull scan: "+str(datetime.date.today())+"\n")
+			out.write("Hour of last unsuccessfull scan: "+str(datetime.datetime.now().time())+"\n")
+			out.write("Person responsible: "+person+"\n")
+		### Writing data if scan went unsuccessful ###
+		else:
+			out.write("Date of last successfull scan: "+str(datetime.date.today())+"\n")
+			out.write("Hour of last successfull scan: "+str(datetime.datetime.now().time())+"\n")
+			out.write("Person responsible: "+person+"\n")
+		out.close()
+	### Writing data to already existing file ###
+	else:
+		out = open("scan_params.txt","r")
+		out_data = out.read().splitlines()
+		out.close()
+		success=False
+		fail=False
+		### Reading file ###
+		for i in range(len(out_data)):
+			out_data[i]=out_data[i].strip().split(":",1)
+			out_data[i][0]=out_data[i][0].strip()
+			out_data[i][1] = out_data[i][1].strip()
+			### Checking if there is success or unsuccess saved ###
+			if "Date of last successfull scan" in out_data[i]:
+				success=True
+			if "Date of last unsuccessfull scan" in out_data[i]:
+				fail=True
+		### Writing data if it was successfull opeation ###
+		if ok==True:
+			### If success was previously written ###
+			if success==True:
+				if out_data[0][0]=="Date of last successfull scan":
+					out_data[0][1]=str(datetime.date.today())
+					out_data[1][1]=str(datetime.datetime.now().time())
+					out_data[2][1]=person
+				else:
+					out_data[3][1]=str(datetime.date.today())
+					out_data[4][1]=str(datetime.datetime.now().time())
+					out_data[5][1]=person
+			### if success was not previously written ###
+			else:
+				out_data.append(["Date of last successfull scan",str(datetime.date.today())])
+				out_data.append(["Hour of last successfull scan", str(datetime.datetime.now().time())])
+				out_data.append(["Person responsible",person])
+		else:
+			### if fail was previously written to file ###
+			if fail==True:
+				if out_data[0][0]=="Date of last unsuccessfull scan":
+					out_data[0][1]=str(datetime.date.today())
+					out_data[1][1]=str(datetime.datetime.now().time())
+					out_data[2][1]=person
+				else:
+					out_data[3][1]=str(datetime.date.today())
+					out_data[4][1]=str(datetime.datetime.now().time())
+					out_data[5][1]=person
+			### if fail was not previously written to file ###
+			else:
+				out_data.append(["Date of last unsuccessfull scan",str(datetime.date.today())])
+				out_data.append(["Hour of last unsuccessfull scan", str(datetime.datetime.now().time())])
+				out_data.append(["Person responsible",person])
+		for i in range(len(out_data)):
+			out_data[i]=out_data[i][0]+": "+out_data[i][1]+"\n"
+		out=open("scan_params.txt","w")
+		out.write(''.join(out_data))
+		out.close()
+
+### Function for drawing graph ###
+def graph(neighbour):
+	### Dictionary for keeping data to create graph ###
+	neighborship_dict = {}
+
+	### Calculatiing and adding nodes and edges to network ###
+	for router in neighbour:
+		for ip in router[1]:
+			times = 0
+			for router_second in neighbour:
+				if router_second == router:
+					continue
+				for ip_net in router_second[2]:
+					if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_net, strict=False):
+						times = times + 1
+			for router_second in neighbour:
+				if router_second == router:
+					continue
+				for ip_net in router_second[2]:
+					if times == 0:
+						break
+					if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_net, strict=False) and times == 1:
+						neighborship_dict[(router_second[0], router[0])] = ip
+						break
+					if ipaddress.ip_address(ip) in ipaddress.ip_network(ip_net, strict=False) and times > 1:
+						neighborship_dict[str(ipaddress.ip_network(ip_net, strict=False)), router[0]] = ip
+
+	### Creating graph ###
+	G = nx.Graph()
+
+	### Drawing graph and saving it to file ###
+	G.add_edges_from(neighborship_dict.keys())
+	pos = nx.spring_layout(G, k=0.1, iterations=70)
+	nx.draw_networkx_labels(G, pos, font_size=9, font_family="sans-serif", font_weight="bold")
+	nx.draw_networkx_edges(G, pos, width=4, alpha=0.4, edge_color='black')
+	nx.draw_networkx_edge_labels(G, pos, neighborship_dict, label_pos=0.3, font_size=6)
+	nx.draw(G, pos, node_size=800, with_labels=False, node_color='b')
+	plt.savefig('static/topology.png')
+
 ############################
 ### Routes in web server ###
 ############################
@@ -157,27 +339,40 @@ def pingy(ip_list):
 @app.route("/", methods=["GET","POST"])
 def main():
 
-	scan = scan_params()
-	if len(scan)!=0:
-		empty = False
+	scan,done_ok = scan_params()
+
+	if done_ok==True:
+		empty=False
+		data=formatting()
 	else:
 		empty=True
+		data=[]
+
 	path = os.path.dirname(os.path.realpath(__file__))+"\ip_range.txt\n"
 	path_pass = os.path.dirname(os.path.realpath(__file__)) + "\passwords.txt\n"
 	form=Start()
 
 	if form.validate_on_submit():
+		time.sleep(5)
 		ip_list=ip_range()
 		if len(ip_list)==0:
-			return render_template("index.html", empty=empty, form=form, path=path, path_pass=path_pass,
-								   scan_params=scan, id="R1")
+			scan_parametres(False,scan,form.name.data)
+			return redirect(url_for("main"))
 		password_list=passwords()
 		ip_available = pingy(ip_list)
 		if len(ip_available)==0:
+			scan_parametres(False, scan, form.name.data)
 			flash("No ability to ping any device with given IP adress. Check IP addresses in file and try again. ")
 		else:
+			scan_parametres(True, scan, form.name.data)
 			flash("Ability to connect with devices in the network. Trying to establish ssh session in order to gather information. ")
-	return render_template("index.html",empty=empty, form=form, path=path, path_pass=path_pass,scan_params=scan,id="R1")
+		return redirect(url_for("main"))
+
+	if scan==[]:
+		scan_data=False
+	else:
+		scan_data=True
+	return render_template("index.html",empty=empty, form=form, path=path, path_pass=path_pass,scan_params=scan, scan_data=scan_data,id="R1", data=data)
 
 ### shutdown route - closing web server ###
 @app.route("/shutdown")

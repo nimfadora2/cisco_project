@@ -1,3 +1,6 @@
-Date of last scan: 10.10.2017
-Hour of last scan: 12.00.45 CTE
-Person responsible: Jan Jan
+Date of last unsuccessfull scan: 2018-02-20
+Hour of last unsuccessfull scan: 01:34:07.993528
+Person responsible: Kings
+Date of last successfull scan: 2018-02-20
+Hour of last successfull scan: 01:34:07.993528
+Person responsible: Kings

@@ -1,0 +1,58 @@
+
+
+Name    MAC address    Hardware    IOS
+R1    c001.13d0.0000    2691    C2691-ENTSERVICESK9-M
+Neighbors:    R3 
+Interface                  IP address         Status                Protocol
+FastEthernet0/0            192.168.2.101      up                    up      
+Serial0/0                  172.16.0.1         up                    up      
+FastEthernet0/1            unassigned         administratively down down    
+Inventory of device:
+NAME: "2691 chassis", DESCR: "2691 chassis"
+NAME: "WAN Interface Card - Serial (1T)", DESCR: "WAN Interface Card - Serial (1T)"
+
+Name    MAC address    Hardware    IOS
+R2    c002.3cf8.0000    2691    C2691-ENTSERVICESK9-M
+Neighbors:    R3 
+Interface                  IP address         Status                Protocol
+FastEthernet0/0            192.168.2.102      up                    up      
+Serial0/0                  172.16.0.5         up                    up      
+FastEthernet0/1            unassigned         administratively down down    
+Inventory of device:
+NAME: "2691 chassis", DESCR: "2691 chassis"
+NAME: "WAN Interface Card - Serial (1T)", DESCR: "WAN Interface Card - Serial (1T)"
+
+Name    MAC address    Hardware    IOS
+R3    c003.3f9c.0000    2691    C2691-ENTSERVICESK9-M
+Neighbors:    R2  R1  R4  R5 
+Interface                  IP address         Status                Protocol
+FastEthernet0/0            192.168.2.103      up                    up      
+Serial0/0                  172.16.0.2         up                    up      
+FastEthernet0/1            10.0.50.2          up                    up      
+Serial0/1                  172.16.0.6         up                    up      
+Serial0/2                  10.0.50.6          up                    up      
+Inventory of device:
+NAME: "2691 chassis", DESCR: "2691 chassis"
+NAME: "WAN Interface Card - Serial (1T)", DESCR: "WAN Interface Card - Serial (1T)"
+NAME: "WAN Interface Card - Serial (1T)", DESCR: "WAN Interface Card - Serial (1T)"
+NAME: "WAN Interface Card - Serial (1T)", DESCR: "WAN Interface Card - Serial (1T)"
+
+Name    MAC address    Hardware    IOS
+R4    c004.3930.0000    2691    C2691-ENTSERVICESK9-M
+Neighbors:    R3 
+Interface                  IP address         Status                Protocol
+FastEthernet0/0            192.168.2.104      up                    up      
+FastEthernet0/1            10.0.50.1          up                    up      
+Inventory of device:
+NAME: "2691 chassis", DESCR: "2691 chassis"
+
+Name    MAC address    Hardware    IOS
+R5    c005.02f4.0000    2691    C2691-ENTSERVICESK9-M
+Neighbors:    R3 
+Interface                  IP address         Status                Protocol
+FastEthernet0/0            192.168.2.105      up                    up      
+Serial0/0                  10.0.50.5          up                    up      
+FastEthernet0/1            unassigned         administratively down down    
+Inventory of device:
+NAME: "2691 chassis", DESCR: "2691 chassis"
+NAME: "WAN Interface Card - Serial (1T)", DESCR: "WAN Interface Card - Serial (1T)"
