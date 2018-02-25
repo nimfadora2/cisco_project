@@ -120,10 +120,19 @@ $(document).ready(function(){
         </tbody>
     </table>
 </div>
+<div>
+    <p> <h2> <b>Routers detected in the network:</b> </h2>
+{% for router in summary %}
+    <a href="#{{router}}">{{ router }}</a>
+    {% endfor %}
+    <br>
+ Click on the name to get specific data about each of routers. </p>
+</div>
+<hr>
 {% for router in data %}
 
 <div class="panel panel-default">
-    <div class="panel-heading"> <h4><b>{{router[0]}}</b></h4> </div>
+    <div class="panel-heading" id="{{router[0]}}"> <h4><b>{{router[0]}}</b></h4> </div>
     <div class="panel-body">
 
         <h3> <b>General info</b> </h3>

@@ -1,6 +1,6 @@
-Date of last unsuccessfull scan: 2018-02-20
-Hour of last unsuccessfull scan: 01:34:07.993528
-Person responsible: Kings
+Date of last unsuccessfull scan: 2018-02-25
+Hour of last unsuccessfull scan: 22:34:26.853813
+Person responsible: Bal
 Date of last successfull scan: 2018-02-20
 Hour of last successfull scan: 01:34:07.993528
 Person responsible: Kings

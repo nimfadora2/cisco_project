@@ -2,4 +2,15 @@
 
 {% block page_content %}
 <div class="page-header"><b> <h2> Help with short tutorial </h2></b></div>
-{% enblock %}
+<p> Page 'Home' presents the results of last scan, if such was done before. If no successful or unsuccessful
+    scan were made before on the main page there will be displayed only location of files, from where parametres like passwords or ip addresses are taken.
+If unsuccessful scan was made before such information will be displayed and the last date of such try will be displayed. If successfull scan was made, the data will be presented under
+the form to write name of person responsible for scanning. Also in the page '/topology' appropriate topology image will be displayed. </p>
+<p> To start scan of the network person must write her name in the filed 'Name' and press 'Start'. The loading icon will be visible as long as the scanning will take place.
+If anything goes wrong during scanning, appropriate information will be displayed in the yellow alert window under the navigation bar. Also in case of successful scanning flash messages with
+    description will be displayed, so if there will be mistake in the middle of the program, the user will be able to detect the source of the error.
+</p>
+<p> To shutdown server, press the icon on the right side of the navbar. </p>
+<p> Warning! This page only works for local host - to use that in whole network, small changes in code are demanded (but it is easy to change).
+    <p> File with the scan data can be found on server in the same place as the files for the project. the name is 'final.txt'. The dates and times of scanning are kept in 'scan_params.txt'</p>
+{% endblock %}

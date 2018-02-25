@@ -12,9 +12,11 @@ import datetime
 import time
 import subprocess
 import os.path
+import paramiko
 import re
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import networkx as nx
+import sys
 
 ########################################
 ### Initialization of needed modules ###
@@ -27,6 +29,7 @@ import networkx as nx
 app = Flask(__name__)
 app.config.from_object('config')
 bootstrap = Bootstrap(app)
+
 
 #############################################
 ### Function definitions used in webpages ###
@@ -41,6 +44,7 @@ def shutdown_server():
 	if func is None:
 		raise RuntimeError('Not running with the Werkzeug Server')
 	func()
+
 
 ### Function that reads info from scan_params.txt ###
 def scan_params():
@@ -57,24 +61,25 @@ def scan_params():
 		# CLosing the file
 		scan_file.close()
 	except IOError:
-		return []
-	scan_info=[]
-	done_well=False
+		return [],[]
+	scan_info = []
+	done_well = False
 	for data in scan:
-		scan_info.append(data.split(":",1))
-		if data.split(":")[0]=="Date of last successfull scan":
-			done_well=True
-	return scan_info,done_well
+		scan_info.append(data.split(":", 1))
+		if data.split(":")[0] == "Date of last successfull scan":
+			done_well = True
+	return scan_info, done_well
+
 
 ### Function that reads valid ip range from file ###
 def ip_range():
 	try:
 		# Try to open file for reading
-		ip_file = open("ip_range.txt","r")
-		
+		ip_file = open("ip_range.txt", "r")
+
 		# Starting with the beginning of the file
 		ip_file.seek(0)
-		
+
 		# Reading the line
 		ip_list_prev = ip_file.read()
 
@@ -84,12 +89,12 @@ def ip_range():
 		flash("The file 'ip_range.txt' does not exist! Please check and try again!")
 		return None
 	### Reading into list IP's delimited by "," ###
-	ip_list_prev=ip_list_prev.strip().strip(",").split(",")
-	ip_list=[]
+	ip_list_prev = ip_list_prev.strip().strip(",").split(",")
+	ip_list = []
 	### Striping each IP of excess white spaces ###
 	for i in range(len(ip_list_prev)):
-		if ip_list_prev[i]==[]: continue
-		ip_list_prev[i]=ip_list_prev[i].strip()
+		if ip_list_prev[i] == []: continue
+		ip_list_prev[i] = ip_list_prev[i].strip()
 
 		### Checking if adddressess are valid - if so apppending them to ip_list, else - returning []
 		if "#" in ip_list_prev[i]:
@@ -97,14 +102,14 @@ def ip_range():
 			ip_temp = temp[0]
 			number = int(temp[1])
 			try:
-				ip=ipaddress.ip_address(ip_temp)
+				ip = ipaddress.ip_address(ip_temp)
 				ip_list.append(ip)
 			except ValueError:
 				flash("Invalid IP address! Check and try again.")
 				ip_list = []
 				return ip_list
-			for i in range(1,number):
-				ip_list.append(ip+i)
+			for i in range(1, number):
+				ip_list.append(ip + i)
 		else:
 			try:
 				ip_list.append(ipaddress.ip_address(ip_list_prev[i]))
@@ -113,6 +118,7 @@ def ip_range():
 				return ip_list
 	flash("The file ip_range.txt has been read.")
 	return ip_list
+
 
 ### Function that reads passwords and from file and puts them in the list ###
 def passwords():
@@ -134,6 +140,7 @@ def passwords():
 	flash("The file passwords.txt has been read.")
 	return password
 
+
 ### Function which is checking which addresses are available to ping ###
 def pingy(ip_list):
 	ip_available = []
@@ -142,8 +149,130 @@ def pingy(ip_list):
 		### Appending ip to list if device is pingable ###
 		if ping_reply == 0:
 			ip_available.append(ip)
-	#print(ip_available)
+	# print(ip_available)
 	return ip_available
+
+
+### Function which is connecting to devices by ssh and exporting neccessary data to file
+def connect(ip_list):
+	finaloutput = ""
+	lista = []
+	for line in ip_list:
+		with open('passwords.txt', 'r') as myfile:
+			passwords = myfile.read().replace('\n', " ").split(' ')
+		flag = 1
+		counter = 0
+		while flag:
+			try:
+				ssh_para = paramiko.SSHClient()
+				ssh_para.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+				counter = counter + 1
+				ssh_para.connect(str(line), username='admin', password=passwords[counter])
+				flag = 0
+				connection = ssh_para.invoke_shell()
+				# print  ("Succesfull connection with: " + line.strip() + ", Password = " + passwords[counter])
+				del passwords[counter]
+			except paramiko.AuthenticationException:
+				print("Bad password")
+			except IndexError:
+				print("No pass in passwords.txt")
+				sys.exit()
+
+		sh_int_br = "sh ip int brief | include (Ethernet|Serial)"
+		sh_inv = "show inventory | include NAME"
+		sh_int_ernet = "show interfaces | include Internet"
+		cisco_commands = '''show version | include (, Version|uptime is|bytes of memory|Hz)&\
+
+                         show interfaces | include bia&\
+                         show processes cpu | include CPU utilization&\
+                         show memory statistics&\
+                         show cdp neighbors detail | include Device ID&\
+                         show ip protocols | include Routing Protocol'''
+		commands_list = cisco_commands.split("&")
+		# print commands_list
+
+		for each_line in commands_list:
+			connection.send(each_line + "\n")
+			time.sleep(1)
+
+		output = connection.recv(65535).decode('utf-8')
+
+		connection.send(sh_int_br + "\n")
+		time.sleep(1)
+		output_int = str(connection.recv(65535).decode('utf-8'))
+		output_int = str(output_int).split("\n", 1)[-1]
+		output_int = output_int[:output_int.rfind("\n")]
+		output_int = output_int.replace("YES NVRAM", " ")
+
+		connection.send(sh_inv + "\n")
+		time.sleep(1)
+		output_inv = connection.recv(65535).decode('utf-8')
+		output_inv = str(output_inv).split("\n", 1)[-1]
+		output_inv = output_inv[:output_inv.rfind("\n")]
+		output_inv = str(output_inv)
+		# print output_inv
+
+		connection.send(sh_int_ernet + "\n")
+		time.sleep(1)
+		output_int_ernet = connection.recv(65535).decode('utf-8')
+		output_int_ernet = str(output_int_ernet).split("\n", 1)[-1]
+		output_int_ernet = output_int_ernet[:output_int_ernet.rfind("\n")]
+		output_int_ernet = str(output_int_ernet).replace("Internet address is ", "")
+		# print output_int_ernet
+
+
+
+		dev_hostname = re.search(r"(.+) uptime is", output)
+		hostname = dev_hostname.group(1)
+
+		dev_mac = re.findall(r"\(bia (.+?)\)", output)
+		mac = dev_mac[0]
+
+		dev_model = re.search(r"(.+?) (.+?) (.+) bytes of memory", output)
+		model = dev_model.group(2)
+
+		dev_image_name = re.search(r" \((.+)\), Version", output)
+		image_name = dev_image_name.group(1)
+
+		dev_os = re.search(r"\), Version (.+)", output)
+		os = dev_os.group(1)
+
+		dev_cdp_neighbors = re.findall(r"Device ID: (.+)\r\n", output)
+		all_cdp_neighbors = " ".join(dev_cdp_neighbors)
+		all_cdp_neighbors_st = str(all_cdp_neighbors).replace(".teo", " ")
+
+		finaloutput = finaloutput + "\n\n\n" + "Name\t" + "MAC address\t" + "Hardware\t" + "IOS" + "\n" + \
+					  hostname + "\t" + mac + "\t" + model + "\t" + image_name + "\n" + "Neighbors:\t" + all_cdp_neighbors_st + "\n" + \
+					  "Interface\t" + " IP address\t" + "Status\t" + "Protocol" + "\n" + output_int + "\n" + "Inventory of device:" + "\n" + output_inv
+
+		singlelist = []
+		testlist = []
+		wordlist = []
+		output_int = output_int.split()
+
+		for line in output_int:
+			try:
+				if (ipaddress.ip_address(line)):
+					wordlist.append(line)
+			except ValueError:
+				pass
+		singlelist.append(hostname)
+		output_int_ernet = output_int_ernet.strip().split("\n")
+
+		for line in output_int_ernet:
+			line = line.replace('\r', '')
+			line = line.strip()
+			testlist.append(line)
+		singlelist.append(wordlist)
+		singlelist.append(testlist)
+		lista.append(singlelist)
+		ssh_para.close()
+	responde_route = open("final.txt", "w")
+	responde_route.write(finaloutput)
+	print(lista)
+	responde_route.close()
+	return lista
+
 
 ### Function for reading file output to prepare it to the website format ###
 def formatting():
@@ -155,10 +284,10 @@ def formatting():
 	all = []
 	number = 0
 	current = []
-	k=0
+	k = 0
 	### State machine for appropriate reading of file ###
 	for line in out:
-		k=k+1
+		k = k + 1
 		### Empty line - separator for routers ###
 		if line == '':
 			if current != []:
@@ -204,83 +333,84 @@ def formatting():
 		elif number == 3:
 			temp = line.split("\", ")
 			modules.append([temp[0].strip('NAME: ').strip("\""), temp[1].strip('DESCR: ').strip("\"")])
-			if k==len(out):
+			if k == len(out):
 				current.append(modules)
 				all.append(current)
 	return all
 
-### Function for keeping scan parametres ###
-def scan_parametres(ok,scan,person):
 
+### Function for keeping scan parametres ###
+def scan_parametres(ok, scan, person):
 	### Writing to file if it is empty or not existing ###
-	if scan==[]:
-		out = open("scan_params.txt","w")
+	if scan == []:
+		out = open("scan_params.txt", "w")
 		### Writing data if everything went successful ###
-		if ok==False:
-			out.write("Date of last unsuccessfull scan: "+str(datetime.date.today())+"\n")
-			out.write("Hour of last unsuccessfull scan: "+str(datetime.datetime.now().time())+"\n")
-			out.write("Person responsible: "+person+"\n")
+		if ok == False:
+			out.write("Date of last unsuccessfull scan: " + str(datetime.date.today()) + "\n")
+			out.write("Hour of last unsuccessfull scan: " + str(datetime.datetime.now().time()) + "\n")
+			out.write("Person responsible: " + person + "\n")
 		### Writing data if scan went unsuccessful ###
 		else:
-			out.write("Date of last successfull scan: "+str(datetime.date.today())+"\n")
-			out.write("Hour of last successfull scan: "+str(datetime.datetime.now().time())+"\n")
-			out.write("Person responsible: "+person+"\n")
+			out.write("Date of last successfull scan: " + str(datetime.date.today()) + "\n")
+			out.write("Hour of last successfull scan: " + str(datetime.datetime.now().time()) + "\n")
+			out.write("Person responsible: " + person + "\n")
 		out.close()
 	### Writing data to already existing file ###
 	else:
-		out = open("scan_params.txt","r")
+		out = open("scan_params.txt", "r")
 		out_data = out.read().splitlines()
 		out.close()
-		success=False
-		fail=False
+		success = False
+		fail = False
 		### Reading file ###
 		for i in range(len(out_data)):
-			out_data[i]=out_data[i].strip().split(":",1)
-			out_data[i][0]=out_data[i][0].strip()
+			out_data[i] = out_data[i].strip().split(":", 1)
+			out_data[i][0] = out_data[i][0].strip()
 			out_data[i][1] = out_data[i][1].strip()
 			### Checking if there is success or unsuccess saved ###
 			if "Date of last successfull scan" in out_data[i]:
-				success=True
+				success = True
 			if "Date of last unsuccessfull scan" in out_data[i]:
-				fail=True
+				fail = True
 		### Writing data if it was successfull opeation ###
-		if ok==True:
+		if ok == True:
 			### If success was previously written ###
-			if success==True:
-				if out_data[0][0]=="Date of last successfull scan":
-					out_data[0][1]=str(datetime.date.today())
-					out_data[1][1]=str(datetime.datetime.now().time())
-					out_data[2][1]=person
+			if success == True:
+				if out_data[0][0] == "Date of last successfull scan":
+					out_data[0][1] = str(datetime.date.today())
+					out_data[1][1] = str(datetime.datetime.now().time())
+					out_data[2][1] = person
 				else:
-					out_data[3][1]=str(datetime.date.today())
-					out_data[4][1]=str(datetime.datetime.now().time())
-					out_data[5][1]=person
+					out_data[3][1] = str(datetime.date.today())
+					out_data[4][1] = str(datetime.datetime.now().time())
+					out_data[5][1] = person
 			### if success was not previously written ###
 			else:
-				out_data.append(["Date of last successfull scan",str(datetime.date.today())])
+				out_data.append(["Date of last successfull scan", str(datetime.date.today())])
 				out_data.append(["Hour of last successfull scan", str(datetime.datetime.now().time())])
-				out_data.append(["Person responsible",person])
+				out_data.append(["Person responsible", person])
 		else:
 			### if fail was previously written to file ###
-			if fail==True:
-				if out_data[0][0]=="Date of last unsuccessfull scan":
-					out_data[0][1]=str(datetime.date.today())
-					out_data[1][1]=str(datetime.datetime.now().time())
-					out_data[2][1]=person
+			if fail == True:
+				if out_data[0][0] == "Date of last unsuccessfull scan":
+					out_data[0][1] = str(datetime.date.today())
+					out_data[1][1] = str(datetime.datetime.now().time())
+					out_data[2][1] = person
 				else:
-					out_data[3][1]=str(datetime.date.today())
-					out_data[4][1]=str(datetime.datetime.now().time())
-					out_data[5][1]=person
+					out_data[3][1] = str(datetime.date.today())
+					out_data[4][1] = str(datetime.datetime.now().time())
+					out_data[5][1] = person
 			### if fail was not previously written to file ###
 			else:
-				out_data.append(["Date of last unsuccessfull scan",str(datetime.date.today())])
+				out_data.append(["Date of last unsuccessfull scan", str(datetime.date.today())])
 				out_data.append(["Hour of last unsuccessfull scan", str(datetime.datetime.now().time())])
-				out_data.append(["Person responsible",person])
+				out_data.append(["Person responsible", person])
 		for i in range(len(out_data)):
-			out_data[i]=out_data[i][0]+": "+out_data[i][1]+"\n"
-		out=open("scan_params.txt","w")
+			out_data[i] = out_data[i][0] + ": " + out_data[i][1] + "\n"
+		out = open("scan_params.txt", "w")
 		out.write(''.join(out_data))
 		out.close()
+
 
 ### Function for drawing graph ###
 def graph(neighbour):
@@ -321,53 +451,57 @@ def graph(neighbour):
 	nx.draw(G, pos, node_size=800, with_labels=False, node_color='b')
 	plt.savefig('static/topology.png')
 
+
 ############################
 ### Routes in web server ###
 ############################
 
 # In this part there are routes for web server - data in decorators
-# e.g. @app.route("/shutdown") show the end of page we should write 
+# e.g. @app.route("/shutdown") show the end of page we should write
 # to have access to this part of code, e.g. 127.0.0.1:5000/shutdown
 # in the mentioned case.
 
 ### main route - displaying necessary information ###
-@app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET", "POST"])
 def main():
+	scan, done_ok = scan_params()
 
-	scan,done_ok = scan_params()
-
-	if done_ok==True:
-		empty=False
-		data=formatting()
+	if done_ok == True:
+		empty = False
+		data = formatting()
 	else:
-		empty=True
-		data=[]
+		empty = True
+		data = []
 
-	path = os.path.dirname(os.path.realpath(__file__))+"\ip_range.txt\n"
+	path = os.path.dirname(os.path.realpath(__file__)) + "\ip_range.txt\n"
 	path_pass = os.path.dirname(os.path.realpath(__file__)) + "\passwords.txt\n"
-	form=Start()
+	form = Start()
 
 	if form.validate_on_submit():
-		time.sleep(5)
-		ip_list=ip_range()
-		if len(ip_list)==0:
-			scan_parametres(False,scan,form.name.data)
+		ip_list = ip_range()
+		if len(ip_list) == 0:
+			scan_parametres(False, scan, form.name.data)
 			return redirect(url_for("main"))
-		password_list=passwords()
+		password_list = passwords()
 		ip_available = pingy(ip_list)
-		if len(ip_available)==0:
+		print(ip_available)
+		if len(ip_available) == 0:
 			scan_parametres(False, scan, form.name.data)
 			flash("No ability to ping any device with given IP adress. Check IP addresses in file and try again. ")
 		else:
 			scan_parametres(True, scan, form.name.data)
-			flash("Ability to connect with devices in the network. Trying to establish ssh session in order to gather information. ")
+			flash(
+				"Ability to connect with devices in the network. Trying to establish ssh session in order to gather information. ")
+			graph(connect(ip_available))
 		return redirect(url_for("main"))
 
-	if scan==[]:
-		scan_data=False
+	if scan == []:
+		scan_data = False
 	else:
-		scan_data=True
-	return render_template("index.html",empty=empty, form=form, path=path, path_pass=path_pass,scan_params=scan, scan_data=scan_data,id="R1", data=data)
+		scan_data = True
+	return render_template("index.html", empty=empty, form=form, path=path, path_pass=path_pass, scan_params=scan,
+						   scan_data=scan_data, id="R1", data=data)
+
 
 ### shutdown route - closing web server ###
 @app.route("/shutdown")
@@ -375,25 +509,27 @@ def shutdown():
 	shutdown_server()
 	return render_template("shutting.html")
 
+
 ### topology route - displays topology picture ###
 @app.route("/topology")
 def topology():
-	no_file=True
-	if os.path.exists("topology.png")==True:
-		no_file=False
-	return render_template("topology.html",no_file=no_file)
+	no_file = True
+	if os.path.exists("topology.png") == True:
+		no_file = False
+	return render_template("topology.html", no_file=no_file)
+
 
 ### help route - information about program and short description ###
 @app.route("/help")
 def help():
 	return render_template("help.html")
 
+
 ### run application ###
 # This application is placed in loopback 127.0.0.1 at the port 5000.
 # This can be changed if needed.
-if __name__=='__main__':
+if __name__ == '__main__':
 	app.run(debug=True)
-
 #######################
 ### Sources of help ###
 #######################
