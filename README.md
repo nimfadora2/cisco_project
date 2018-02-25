@@ -37,7 +37,7 @@ project_all
     ---- css<br />
       ------ bootstrap.css<br />
     ---- js<br />
-      ------ bootstrap.js<br />
+      ------ bootstrap.min.js<br />
   --loading.gif<br />
   --topology.png<br />
  -templates       //all html files<br />
