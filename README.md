@@ -28,7 +28,9 @@ To use our application necessary is also Web browser.<br />
 
 --- Running application ---<br />
 
-After download of all files in github, please make sure they are places in proper folders. Folder hierarchy:
+After download of all files in github, please make sure they are places in proper folders. you can also download project_all.zip which already has good hierarchy.
+
+Folder hierarchy:
 
 project_all
 -static:          //pictures and website files <br />
